@@ -1,0 +1,134 @@
+version: "3.3"
+services:
+  api-gateway:
+    build:
+      context: api-gateway
+      dockerfile: Dockerfile
+      target: base
+    depends_on:
+      - auth-service
+      - product-service
+    environment:
+      ORDER_SERVICE_API_URL: http://order-service:5003/api/v1
+      PRODUCT_SERVICE_API_URL: http://product-service:5002/api/v1
+      AUTH_SERVICE_API_URL: http://auth-service:5001/api/v1
+      NODE_ENV: development
+      PORT : 5000
+      COOKIE_SECRET: AAA
+    volumes:
+      - ./api-gateway:/usr/app
+    container_name: api-gateway
+    expose:
+      - "5000"
+    ports:
+      - "5000:5000"
+    command: npm run dev
+  auth-service:
+    build:
+      context: auth-service
+      dockerfile: Dockerfile
+      target: base
+    depends_on:
+      - auth-db-service
+    environment:
+      NODE_ENV: development
+      PORT : 5001
+      OTP_GENERATE_NUMBER : 4
+      DB_URI : mongodb://auth:auth@auth-db-service
+      JWT_ACCESSTOKEN_SEC : YYY
+      JWT_REFRESHTOKEN_SEC : XXX
+      COOKIE_PARSER_SECRET : III
+    volumes:
+      - ./auth-service:/usr/app
+    container_name: auth-service
+    expose:
+      - "5001"
+    ports:
+      - "5001:5001"
+    command: npm run dev
+  auth-db-service:
+    image: mongo
+    volumes:
+     - "/var/lib/mongodb-auth:/data/db"
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: auth
+      MONGO_INITDB_ROOT_PASSWORD: auth
+      MONGO_INITDB_DATABASE: auth
+    container_name: auth-db-service
+    ports:
+      - "27017:27017"
+    command: 
+            - "--quiet"
+            - '--logpath'
+            - '/var/log/mongodb/mongodb-auth.log'
+  product-service:
+    build: 
+      context: product-service
+      dockerfile: Dockerfile
+      target: base
+    depends_on:
+      - product-db-service
+    environment:
+      NODE_ENV: development
+      DB_URI : mongodb://product:product@product-db-service
+      PORT: 5002
+    volumes:
+      - ./product-service:/usr/app
+    container_name: product-service
+    expose:
+      - "5002"
+    ports:
+      - "5002:5002"
+    command: npm run dev
+  product-db-service:
+    image: mongo
+    volumes:
+     - "/var/lib/mongodb-product:/data/db"
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: product
+      MONGO_INITDB_ROOT_PASSWORD: product
+      MONGO_INITDB_DATABASE: product
+    container_name: product-db-service
+    ports:
+      - "27018:27017"
+    command: 
+      - "--quiet"
+      - '--logpath'
+      - '/var/log/mongodb/mongodb-product.log'
+  order-service:
+    build: 
+      context: order-service
+      dockerfile: Dockerfile
+      target: base
+    depends_on:
+      - order-db-service
+    environment:
+      NODE_ENV : development
+      PORT : 5003
+      DB_URI : mongodb://order:order@order-db-service
+    volumes:
+      - ./order-service:/usr/app
+    container_name: order-service
+    expose:
+      - 5003
+    ports:
+      - "5003:5003"
+    command: npm run dev
+  order-db-service:
+    image: mongo
+    volumes:
+     - "/var/lib/mongodb-order:/data/db"
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: order
+      MONGO_INITDB_ROOT_PASSWORD: order
+      MONGO_INITDB_DATABASE: order
+    container_name: order-db-service
+    ports:
+      - "27019:27017"
+    command: 
+      - "--quiet"
+      - '--logpath'
+      - '/var/log/mongodb/mongodb-order.log'
